@@ -30,7 +30,7 @@ function envGetOpenAIModel(): string {
   return model;
 }
 
-export function run() {
+export async function run() {
   const config = new Configuration({
     apiKey: envGetOrAbort("OPENAI_API_TOKEN"),
   });
@@ -50,5 +50,5 @@ export function run() {
     redis: redisClient,
   };
 
-  Bot.dispatch(envGetOrAbort("TGBOT_API_TOKEN"), state);
+  await Bot.dispatch(envGetOrAbort("TGBOT_API_TOKEN"), state);
 }

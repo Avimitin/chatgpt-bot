@@ -75,7 +75,7 @@ async function reply_handler(bot: TelegramBot, msg: Message, state: AppState) {
   if (result) {
     cache = JSON.parse(result);
   } else {
-    // TODO: If we lost context, use the user reply message and user input as prompt
+    await bot.sendMessage(msg.chat.id, "Do not disturb other user's chat completion");
     return;
   }
 
@@ -116,20 +116,21 @@ async function reply_handler(bot: TelegramBot, msg: Message, state: AppState) {
   }
 }
 
-export function dispatch(bot_token: string, state: AppState) {
+export async function dispatch(bot_token: string, state: AppState) {
   const bot = new TelegramBot(bot_token, { polling: true });
+  const botID = await bot.getMe().then((info) => info.id);
 
   // Dispatcher
   bot.on("message", async (msg) => {
-    const chat_id = msg.chat.id;
-    const chat_name = msg.chat.first_name || msg.chat.last_name ||
+    const chatID = msg.chat.id;
+    const chatName = msg.chat.first_name || msg.chat.last_name ||
       msg.chat.username;
-    const user_name = msg.from?.first_name || msg.from?.last_name ||
+    const username = msg.from?.first_name || msg.from?.last_name ||
       msg.from?.username;
 
-    if (!state.whitelist.includes(chat_id)) {
+    if (!state.whitelist.includes(chatID)) {
       Logging.warning(
-        `${chat_name}(${chat_id}) attempt to use this bot`,
+        `${chatName}(${chatID}) attempt to use this bot, rejected`,
       );
       return;
     }
@@ -141,7 +142,7 @@ export function dispatch(bot_token: string, state: AppState) {
     const command_payload = msg.text.match(/^\/openai (.+)/ms);
     if (command_payload !== null && command_payload.length > 1) {
       Logging.info(
-        `${user_name} in chat ${chat_name} starting new chat`,
+        `${username} in chat ${chatName}(${chatID}) starting new chat`,
       );
       await openai_handler({
         bot: bot,
@@ -153,10 +154,10 @@ export function dispatch(bot_token: string, state: AppState) {
     }
 
     if (
-      msg.reply_to_message && msg.reply_to_message.from?.is_bot
+      msg.reply_to_message && msg.reply_to_message.from?.id === botID
     ) {
       Logging.info(
-        `${user_name} in chat ${chat_name}(${chat_id}) is using this bot`,
+        `${username} in chat ${chatName}(${chatID}) is using this bot`,
       );
       await reply_handler(bot, msg, state);
     }

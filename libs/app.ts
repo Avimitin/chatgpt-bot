@@ -1,10 +1,16 @@
-import { Configuration, OpenAIApi } from "../deps.ts";
+import {
+  Configuration,
+  createRedisClient,
+  OpenAIApi,
+  RedisClientType,
+} from "../deps.ts";
 import * as Bot from "./bot.ts";
 
 export interface AppState {
   whitelist: number[];
   model: string;
   openai: OpenAIApi;
+  redis: RedisClientType;
 }
 
 function envGetOrAbort(key: string): string {
@@ -33,12 +39,18 @@ export function run() {
     apiKey: envGetOrAbort("OPENAI_API_TOKEN"),
   });
 
+  const whitelist = envGetOrAbort("WHITELIST_CHAT_IDS").split(",").map((elem) =>
+    parseInt(elem)
+  );
+  const redis_url = Deno.env.get("REDIS_ADDR") || "redis://localhost:6379";
+
   const state: AppState = {
     openai: new OpenAIApi(config),
-    whitelist: envGetOrAbort("WHITELIST_CHAT_IDS").split(",").map((elem) =>
-      parseInt(elem)
-    ),
+    whitelist: whitelist,
     model: envGetOpenAIModel(),
+    redis: createRedisClient({
+      url: redis_url,
+    }),
   };
 
   Bot.dispatch(envGetOrAbort("TGBOT_API_TOKEN"), state);

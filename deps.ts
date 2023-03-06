@@ -12,7 +12,4 @@ export {
 
 export { default as chalk } from "npm:chalk@5.2.0";
 
-export {
-  createClient as createRedisClient,
-  type RedisClientType,
-} from "npm:redis@^4.6.5";
+export { Redis } from "npm:ioredis@^5.3.1";

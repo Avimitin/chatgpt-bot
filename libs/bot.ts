@@ -1,38 +1,39 @@
-import { TelegramBot } from "../deps.ts";
+import { ChatCompletionRequestMessage, Message, TelegramBot } from "../deps.ts";
 import * as Logging from "./logging.ts";
 import { AppState } from "./app.ts";
 
-// TODO: KKV storage for chat
-//
-// K1: Chat ID
-// K2: User ID
-// V: messages
-
 async function openai_handler(
-  { bot, state, chat, payload }: {
+  { bot, state, msg, payload }: {
     bot: TelegramBot;
     state: AppState;
-    chat: number;
+    msg: Message;
     payload: string;
   },
 ) {
   // TODO: if inputs are the same, try increase the temperature (Make new cache for this)
-  //
-  // TODO: Store the user input into the KKV cache
+
+  const cache_identifier = msg.chat.type === "private"
+    ? msg.chat.id.toString()
+    : `${msg.chat.id}-${msg.from?.id}`;
+
+  const messages: ChatCompletionRequestMessage[] = [
+    { role: "system", content: "You are a helpful assistant." },
+    { role: "user", content: payload },
+  ];
+
   try {
     const resp = await state.openai.createChatCompletion({
       model: state.model,
-      messages: [
-        { role: "system", content: "You are a helpful assitant." },
-        { role: "user", content: payload },
-      ],
+      messages: messages,
     });
+
+    await state.redis.set(`OPENAI_MESSAGE:${cache_identifier}`, messages);
 
     const reply = resp.data.choices?.reduce((accum, elem) => {
       return `${accum}\n${elem.message?.content}`;
     }, "");
 
-    await bot.sendMessage(chat, reply);
+    await bot.sendMessage(msg.chat.id, reply);
   } catch (error) {
     if (error.response) {
       Logging.error(
@@ -71,7 +72,7 @@ export function dispatch(bot_token: string, state: AppState) {
       await openai_handler({
         bot: bot,
         state: state,
-        chat: chat_id,
+        msg: msg,
         payload: command_payload[1],
       });
       return;

@@ -1,6 +1,4 @@
-//@deno-types="npm:@types/node-telegram-bot-api@0.61.0"
-import TelegramBot from "npm:node-telegram-bot-api@0.61.0";
-
+import { TelegramBot } from "../deps.ts";
 import * as Logging from "./logging.ts";
 import { AppState } from "./app.ts";
 
@@ -67,7 +65,9 @@ export function dispatch(bot_token: string, state: AppState) {
 
     const command_payload = msg.text.match(/^\/openai (.+)/ms);
     if (command_payload !== null && command_payload.length > 1) {
-      Logging.info(`${msg.from?.first_name} in chat ${msg.chat.first_name} starting new chat`);
+      Logging.info(
+        `${msg.from?.first_name} in chat ${msg.chat.first_name} starting new chat`,
+      );
       await openai_handler({
         bot: bot,
         state: state,

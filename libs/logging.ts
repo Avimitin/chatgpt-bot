@@ -1,4 +1,4 @@
-import chalk from "npm:chalk@5.2.0";
+import { chalk } from "../deps.ts";
 
 function info(msg: string) {
   console.log(chalk.bold.greenBright("==> ") + chalk.bold(msg));
@@ -16,6 +16,4 @@ function error(msg: string) {
   console.log(chalk.bold.red("=> ERROR: ") + msg);
 }
 
-export {
-  info, subInfo, warning, error
-};
+export { error, info, subInfo, warning };

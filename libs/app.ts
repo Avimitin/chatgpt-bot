@@ -1,4 +1,4 @@
-import { Configuration, OpenAIApi } from "npm:openai@3.2.1";
+import { Configuration, OpenAIApi } from "../deps.ts";
 import * as Bot from "./bot.ts";
 
 export interface AppState {

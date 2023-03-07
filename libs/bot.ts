@@ -80,12 +80,20 @@ async function openai_handler(
 
     await addIDToThreadCache(msg, state, response_message.message_id);
   } catch (error) {
+    await bot.sendMessage(msg.chat.id, "Internal error, please contact @sh1marin.");
     if (error.response) {
-      Logging.error(
-        `[${error.response.status}] ${JSON.stringify(error.response.data)}`,
-      );
+      if (error.response.status) {
+        Logging.error(
+          `[OpenAI] ${JSON.stringify(error.response.data)}`,
+        );
+        return
+      } else if (error.response.body) {
+        const data = error.response.body;
+        Logging.error(`[Telegram](${data.description})`);
+        return
+      }
     } else {
-      Logging.error(`[Unexpected Error] ${error}`);
+      Logging.error(`[Unexpected Error] ${error.message}`);
     }
   }
 }

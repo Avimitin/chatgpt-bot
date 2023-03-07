@@ -75,6 +75,7 @@ async function openai_handler(
     await bot.editMessageText(reply, {
       chat_id: response_message.chat.id,
       message_id: response_message.message_id,
+      parse_mode: "MarkdownV2",
     });
 
     await addIDToThreadCache(msg, state, response_message.message_id);
@@ -153,6 +154,7 @@ async function reply_handler(bot: TelegramBot, msg: Message, state: AppState) {
     await bot.editMessageText(reply, {
       chat_id: resp_msg.chat.id,
       message_id: resp_msg.message_id,
+      parse_mode: "MarkdownV2",
     });
 
     await addIDToThreadCache(msg, state, resp_msg.message_id);

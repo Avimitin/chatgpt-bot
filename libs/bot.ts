@@ -9,6 +9,15 @@ function getCacheIdentifier(msg: Message): string {
   return `OPENAI_MESSAGE:${suffix}`;
 }
 
+function getThreadCacheIdentifer(msg: Message): string | null {
+  const is_private_chat = msg.chat.type === "private";
+  if (is_private_chat) {
+    return null;
+  }
+
+  return `OPENAI:${msg.chat.id}:THREAD_IDS:${msg.from?.id}`;
+}
+
 async function getOpenAIReply(
   state: AppState,
   messages: ChatCompletionRequestMessage[],
@@ -23,6 +32,18 @@ async function getOpenAIReply(
   }, "");
 
   return reply;
+}
+
+async function addIDToThreadCache(
+  msg: Message,
+  state: AppState,
+  response_msg_id: number,
+) {
+  const identifier = getThreadCacheIdentifer(msg);
+  if (!identifier) {
+    return;
+  }
+  await state.redis.sadd(identifier, response_msg_id);
 }
 
 async function openai_handler(
@@ -55,6 +76,8 @@ async function openai_handler(
       chat_id: response_message.chat.id,
       message_id: response_message.message_id,
     });
+
+    await addIDToThreadCache(msg, state, response_message.message_id);
   } catch (error) {
     if (error.response) {
       Logging.error(
@@ -66,7 +89,29 @@ async function openai_handler(
   }
 }
 
+async function isUserInThread(msg: Message, state: AppState): Promise<boolean> {
+  const key = getThreadCacheIdentifer(msg);
+  if (!key) {
+    // if key not exist, it means user are chating in private chat
+    return true;
+  }
+
+  const bot_msg_id = msg.reply_to_message?.message_id;
+  const ret_id = await state.redis.sismember(key, bot_msg_id);
+
+  return ret_id === 1;
+}
+
 async function reply_handler(bot: TelegramBot, msg: Message, state: AppState) {
+  const user_in_thread = await isUserInThread(msg, state);
+  if (!user_in_thread) {
+    await bot.sendMessage(
+      msg.chat.id,
+      "Do not disturb other user's chat completion",
+    );
+    return;
+  }
+
   const identifier = getCacheIdentifier(msg);
   const result = await state.redis.get(identifier);
 
@@ -75,7 +120,10 @@ async function reply_handler(bot: TelegramBot, msg: Message, state: AppState) {
   if (result) {
     cache = JSON.parse(result);
   } else {
-    await bot.sendMessage(msg.chat.id, "Do not disturb other user's chat completion");
+    await bot.sendMessage(
+      msg.chat.id,
+      "Do not disturb other user's chat completion",
+    );
     return;
   }
 
@@ -106,6 +154,8 @@ async function reply_handler(bot: TelegramBot, msg: Message, state: AppState) {
       chat_id: resp_msg.chat.id,
       message_id: resp_msg.message_id,
     });
+
+    await addIDToThreadCache(msg, state, resp_msg.message_id);
   } catch (error) {
     if (error.response) {
       const response = error.response;
@@ -140,22 +190,29 @@ export async function dispatch(bot_token: string, state: AppState) {
     }
 
     const command_payload = msg.text.match(/^\/openai (.+)/ms);
-    if (command_payload !== null && command_payload.length > 1) {
+    if (command_payload) {
+      if (command_payload.length <= 1) {
+        await bot.sendMessage(msg.chat.id, "Usage: /openai {Your Message}");
+        return;
+      }
+
       Logging.info(
         `${username} in chat ${chatName}(${chatID}) starting new chat`,
       );
+
       await openai_handler({
         bot: bot,
         state: state,
         msg: msg,
         payload: command_payload[1],
       });
+
       return;
     }
 
-    if (
-      msg.reply_to_message && msg.reply_to_message.from?.id === botID
-    ) {
+    const is_replying_to_bot = msg.reply_to_message &&
+      msg.reply_to_message.from && msg.reply_to_message.from.id === botID;
+    if (is_replying_to_bot) {
       Logging.info(
         `${username} in chat ${chatName}(${chatID}) is using this bot`,
       );

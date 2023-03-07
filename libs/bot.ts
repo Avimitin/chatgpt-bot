@@ -172,6 +172,10 @@ export async function dispatch(bot_token: string, state: AppState) {
   const bot = new TelegramBot(bot_token, { polling: true });
   const botID = await bot.getMe().then((info) => info.id);
 
+  bot.onText(/^\/start (.+)/, async (msg) => {
+    await bot.sendMessage(msg.chat.id, "Usage: /openai <Text>");
+  });
+
   // Dispatcher
   bot.on("message", async (msg) => {
     const chatID = msg.chat.id;
@@ -181,6 +185,7 @@ export async function dispatch(bot_token: string, state: AppState) {
       msg.from?.username;
 
     if (!state.whitelist.includes(chatID)) {
+      await bot.sendMessage(msg.chat.id, "Permission denied");
       Logging.warning(
         `${chatName}(${chatID}) attempt to use this bot, rejected`,
       );
@@ -194,7 +199,7 @@ export async function dispatch(bot_token: string, state: AppState) {
     const command_payload = msg.text.match(/^\/openai (.+)/ms);
     if (command_payload) {
       if (command_payload.length <= 1) {
-        await bot.sendMessage(msg.chat.id, "Usage: /openai {Your Message}");
+        await bot.sendMessage(msg.chat.id, "Usage: /openai <Text>");
         return;
       }
 

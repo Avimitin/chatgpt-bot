@@ -1,2 +1,4 @@
 .env
 .neovim.lua
+node_modules
+*.lock*

@@ -1,6 +1,7 @@
-import { ChatCompletionRequestMessage, Message, TelegramBot } from "../deps.ts";
-import * as Logging from "./logging.ts";
-import { AppState } from "./app.ts";
+import { Message, default as TelegramBot } from "node-telegram-bot-api";
+import { type ChatCompletionRequestMessage } from "openai";
+import * as Logging from "./logging";
+import { AppState } from "./app";
 
 function getCacheIdentifier(msg: Message): string {
   const suffix = msg.chat.type === "private"

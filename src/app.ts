@@ -1,6 +1,7 @@
-import { Configuration, OpenAIApi, Redis } from "../deps.ts";
+import * as Logger from "./logging.ts";
 import * as Bot from "./bot.ts";
-import * as Logging from "./logging.ts";
+import { Redis } from "ioredis";
+import { OpenAIApi, Configuration } from "openai";
 
 export interface AppState {
   whitelist: number[];
@@ -10,21 +11,21 @@ export interface AppState {
 }
 
 function envGetOrAbort(key: string): string {
-  const val = Deno.env.get(key);
+  const val = process.env[key];
 
   if (!val) {
     console.error(`ENV: ${key} is not found`);
-    Deno.exit(1);
+    process.exit(1)
   }
 
   return val;
 }
 
 function envGetOpenAIModel(): string {
-  const model = Deno.env.get("OPENAI_MODEL") || "gpt-3.5-turbo";
+  const model = process.env["OPENAI_MODEL"] || "gpt-3.5-turbo";
   if (!["gpt-3.5-turbo", "text-davinci-003"].includes(model)) {
     console.error(`Invalid model selection "${model}"`);
-    Deno.exit(1);
+    process.exit(1);
   }
 
   return model;
@@ -39,9 +40,9 @@ export async function run() {
     parseInt(elem)
   );
 
-  const redis_url = Deno.env.get("REDIS_ADDR") || "redis://localhost:6379";
+  const redis_url = process.env["REDIS_ADDR"] || "redis://localhost:6379";
   const redisClient = new Redis(redis_url);
-  Logging.info(`Connected to ${redis_url}`);
+  Logger.info(`Connected to ${redis_url}`);
 
   const state: AppState = {
     openai: new OpenAIApi(config),

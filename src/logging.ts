@@ -1,4 +1,4 @@
-import { chalk } from "../deps.ts";
+import chalk from "chalk"
 
 function info(msg: string) {
   console.log(chalk.bold.greenBright("==> ") + chalk.bold(msg));
